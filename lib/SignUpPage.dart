@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:servepupil/LoginPage.dart';
 
 class SignUpPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -66,7 +67,10 @@ class SignUpPage extends StatelessWidget {
                 children: [
                   const Text("Already have an account? "),
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => LoginPage()),
+                    ),
                     child: const Text("Login", style: TextStyle(color: Colors.blue)),
                   )
                 ],
