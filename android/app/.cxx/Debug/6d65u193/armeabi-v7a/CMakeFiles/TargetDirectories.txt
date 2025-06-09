@@ -1,0 +1,2 @@
+/Users/user/AndroidStudioProjects/ServePupilFlutter/android/app/.cxx/Debug/6d65u193/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/user/AndroidStudioProjects/ServePupilFlutter/android/app/.cxx/Debug/6d65u193/armeabi-v7a/CMakeFiles/rebuild_cache.dir

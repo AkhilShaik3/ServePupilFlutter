@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:servepupil/ForgotPassword.dart';
 import 'package:servepupil/SignUpPage.dart';
 
 class LoginPage extends StatelessWidget {
@@ -77,11 +78,11 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               GestureDetector(
-                onTap: () => forgotPassword(context),
-                child: const Text(
-                  "Forgot password?",
-                  style: TextStyle(color: Colors.blue),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ForgotPasswordScreen()),
                 ),
+                child: const Text("Forgot Password?", style: TextStyle(color: Colors.blue)),
               ),
               const SizedBox(height: 10),
               Row(
@@ -93,7 +94,7 @@ class LoginPage extends StatelessWidget {
                       context,
                       MaterialPageRoute(builder: (_) => SignUpPage()),
                     ),
-                    child: const Text("Signup", style: TextStyle(color: Colors.blue)),
+                    child: const Text("SignUp", style: TextStyle(color: Colors.blue)),
                   )
                 ],
               ),
