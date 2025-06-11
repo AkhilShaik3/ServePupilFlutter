@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:servepupil/ForgotPassword.dart';
 import 'package:servepupil/SignUpPage.dart';
+import 'package:servepupil/UserHomePage.dart';
+import 'package:servepupil/AdminHomePage.dart'; // Create this if needed
 
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -11,14 +13,30 @@ class LoginPage extends StatelessWidget {
 
   void login(BuildContext context) async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login Successful!")),
-      );
-      // Navigate to HomePage or MainAppPage
+
+      final user = credential.user;
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Login Successful!")),
+        );
+
+        // Redirect based on email
+        if (user.email == 'admin@gmail.com') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => AdminHomePage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => UserHomePage()),
+          );
+        }
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login Failed: $e")),
