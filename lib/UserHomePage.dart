@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-
+import 'package:servepupil/LoginPage.dart';
+import 'package:servepupil/profile_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 class UserHomePage extends StatelessWidget {
   const UserHomePage({super.key});
 
@@ -45,7 +47,11 @@ class UserHomePage extends StatelessWidget {
               child: Column(
                 children: [
                   _buildButton(context, 'Profile', Colors.teal, () {
-                    // Navigate to Profile Page
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ProfileRouter()),
+                    );
                   }),
                   const SizedBox(height: 15),
                   _buildButton(context, 'Create Request', Colors.teal, () {
@@ -60,9 +66,16 @@ class UserHomePage extends StatelessWidget {
                     // Navigate to My Requests Page
                   }),
                   const SizedBox(height: 15),
-                  _buildButton(context, 'Logout', Colors.red, () {
-                    // Handle logout logic
-                    Navigator.pop(context);
+                  _buildButton(context, 'Logout', Colors.red, () async {
+                    // Firebase sign-out logic
+                    await FirebaseAuth.instance.signOut();
+
+                    // Navigate to login page and remove all previous routes
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => LoginPage()),
+                          (Route<dynamic> route) => false,
+                    );
                   }),
                 ],
               ),
