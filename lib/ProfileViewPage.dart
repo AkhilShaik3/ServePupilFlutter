@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:servepupil/EditProfilePage.dart';
 import '../user_profile.dart';
+import 'ChangePasswordPage.dart';
 
 class ProfileViewPage extends StatelessWidget {
   const ProfileViewPage({super.key});
@@ -33,22 +35,53 @@ class ProfileViewPage extends StatelessWidget {
                   radius: 50,
                 ),
                 const SizedBox(height: 20),
-                Text(userProfile.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  userProfile.name,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
                 Text("Phone: ${userProfile.phone}"),
                 Text("Bio: ${userProfile.bio}"),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Column(children: [Text("${userProfile.followers}"), const Text("Followers")]),
+                    Column(
+                      children: [
+                        Text("${userProfile.followers}"),
+                        const Text("Followers"),
+                      ],
+                    ),
                     const SizedBox(width: 40),
-                    Column(children: [Text("${userProfile.following}"), const Text("Following")]),
+                    Column(
+                      children: [
+                        Text("${userProfile.following}"),
+                        const Text("Following"),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                    );
+                  },
                   child: const Text("Edit Profile"),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ChangePasswordPage()),
+                    );
+                  },
+                  child: const Text(
+                    "Change Password",
+                    style: TextStyle(decoration: TextDecoration.underline),
+                  ),
                 ),
               ],
             ),
