@@ -17,7 +17,9 @@ class ProfileViewPage extends StatelessWidget {
       future: userRef.get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data?.value == null) {
-          return const Center(child: Text("Profile not found"));
+          return const Scaffold(
+            body: Center(child: Text("Profile not found")),
+          );
         }
 
         final userProfile = UserProfile.fromJson(
@@ -26,41 +28,61 @@ class ProfileViewPage extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(title: const Text("Profile")),
-          body: Padding(
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(userProfile.imageUrl),
-                  radius: 50,
+                // 🖼 Rectangular full-width profile image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: userProfile.imageUrl.isNotEmpty
+                      ? Image.network(
+                    userProfile.imageUrl,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                      : Container(
+                    height: 200,
+                    width: double.infinity,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                  ),
                 ),
+
                 const SizedBox(height: 20),
                 Text(
                   userProfile.name,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                Text("Phone: ${userProfile.phone}"),
-                Text("Bio: ${userProfile.bio}"),
+                const SizedBox(height: 8),
+                Text(userProfile.phone),
+                const SizedBox(height: 4),
+                Text(userProfile.bio),
                 const SizedBox(height: 20),
+
+                // Followers & Following
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Column(
                       children: [
-                        Text("${userProfile.followers}"),
+                        Text("${userProfile.followers}", style: const TextStyle(fontSize: 16)),
                         const Text("Followers"),
                       ],
                     ),
                     const SizedBox(width: 40),
                     Column(
                       children: [
-                        Text("${userProfile.following}"),
+                        Text("${userProfile.following}", style: const TextStyle(fontSize: 16)),
                         const Text("Following"),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // Edit Profile Button
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -71,6 +93,8 @@ class ProfileViewPage extends StatelessWidget {
                   child: const Text("Edit Profile"),
                 ),
                 const SizedBox(height: 10),
+
+                // Change Password
                 TextButton(
                   onPressed: () {
                     Navigator.push(

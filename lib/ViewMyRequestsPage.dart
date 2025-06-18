@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-
 import 'CommentsPage.dart';
+import 'ProfileViewPage.dart';
 
 class ViewMyRequestsPage extends StatefulWidget {
   @override
@@ -11,6 +11,22 @@ class ViewMyRequestsPage extends StatefulWidget {
 
 class _ViewMyRequestsPageState extends State<ViewMyRequestsPage> {
   final user = FirebaseAuth.instance.currentUser;
+  String userName = "Me";
+
+  @override
+  void initState() {
+    super.initState();
+    fetchMyUsername();
+  }
+
+  void fetchMyUsername() async {
+    final snapshot = await FirebaseDatabase.instance.ref('users/${user!.uid}/name').get();
+    if (snapshot.exists) {
+      setState(() {
+        userName = snapshot.value.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +144,26 @@ class _ViewMyRequestsPageState extends State<ViewMyRequestsPage> {
                           ),
                         ],
                       ),
+
+                      SizedBox(height: 10),
+
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ProfileViewPage()),
+                          );
+                        },
+                        child: Center(
+                          child: Text(
+                            userName,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ),
+                      ),
+
                       SizedBox(height: 16),
+
                       Row(
                         children: [
                           Expanded(
