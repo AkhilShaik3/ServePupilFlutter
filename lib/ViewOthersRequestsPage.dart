@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'CommentsPage.dart';
+import 'OtherUserProfilePage.dart';
+import 'ProfileViewPage.dart';
 
 class ViewOthersRequestsPage extends StatefulWidget {
   @override
@@ -10,11 +12,21 @@ class ViewOthersRequestsPage extends StatefulWidget {
 
 class _ViewOthersRequestsPageState extends State<ViewOthersRequestsPage> {
   final currentUser = FirebaseAuth.instance.currentUser;
+  Map<String, String> userNamesCache = {};
+
+  Future<String> fetchUserName(String uid) async {
+    if (userNamesCache.containsKey(uid)) return userNamesCache[uid]!;
+
+    final snapshot = await FirebaseDatabase.instance.ref('users/$uid/name').get();
+    final name = snapshot.value?.toString() ?? "User";
+    userNamesCache[uid] = name;
+    return name;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Requests")),
+      appBar: AppBar(title: Text("Others Requests")),
       body: StreamBuilder(
         stream: FirebaseDatabase.instance.ref('requests').onValue,
         builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
@@ -42,104 +54,126 @@ class _ViewOthersRequestsPageState extends State<ViewOthersRequestsPage> {
               final isLikedByMe = likedBy.containsKey(currentUser!.uid);
 
               requestCards.add(
-                Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                FutureBuilder<String>(
+                  future: fetchUserName(uid),
+                  builder: (context, nameSnap) {
+                    final userName = nameSnap.data ?? 'User';
+
+                    return Card(
+                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: imageUrl.isNotEmpty
-                                  ? Image.network(imageUrl, width: 80, height: 80, fit: BoxFit.cover)
-                                  : Container(
-                                width: 80,
-                                height: 80,
-                                color: Colors.grey[300],
-                                child: Icon(Icons.image, size: 40, color: Colors.grey[700]),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(description, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  Text(requestType, style: TextStyle(fontSize: 14)),
-                                  Text(place, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                                ],
-                              ),
-                            ),
-                            Column(
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    final ref = FirebaseDatabase.instance
-                                        .ref('requests/$uid/$reqId/likedBy/${currentUser!.uid}');
-                                    if (isLikedByMe) {
-                                      ref.remove();
-                                    } else {
-                                      ref.set(true);
-                                    }
-                                  },
-                                  child: Row(
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: imageUrl.isNotEmpty
+                                      ? Image.network(imageUrl, width: 80, height: 80, fit: BoxFit.cover)
+                                      : Container(
+                                    width: 80,
+                                    height: 80,
+                                    color: Colors.grey[300],
+                                    child: Icon(Icons.image, size: 40, color: Colors.grey[700]),
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(
-                                        isLikedByMe ? Icons.favorite : Icons.favorite_border,
-                                        color: isLikedByMe ? Colors.red : Colors.grey,
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text('$likeCount'),
+                                      Text(description, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      Text(requestType, style: TextStyle(fontSize: 14)),
+                                      Text(place, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
                                     ],
                                   ),
                                 ),
-                                SizedBox(height: 10),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => CommentsPage(
-                                          requestOwnerUid: uid,
-                                          requestId: reqId,
-                                        ),
+                                Column(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        final ref = FirebaseDatabase.instance
+                                            .ref('requests/$uid/$reqId/likedBy/${currentUser!.uid}');
+                                        if (isLikedByMe) {
+                                          ref.remove();
+                                        } else {
+                                          ref.set(true);
+                                        }
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                                            color: isLikedByMe ? Colors.red : Colors.grey,
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text('$likeCount'),
+                                        ],
                                       ),
-                                    );
-                                  },
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.chat_bubble_outline, size: 20),
-                                      SizedBox(width: 4),
-                                      Text('$commentCount'),
-                                    ],
-                                  ),
+                                    ),
+                                    SizedBox(height: 10),
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => CommentsPage(
+                                              requestOwnerUid: uid,
+                                              requestId: reqId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.chat_bubble_outline, size: 20),
+                                          SizedBox(width: 4),
+                                          Text('$commentCount'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
+                            SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () {
+                                if (uid == currentUser!.uid) {
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileViewPage()));
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => OtherUserProfilePage(uid: uid)),
+                                  );
+                                }
+                              },
+                              child: Center(
+                                child: Text(
+                                  userName,
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {},
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: Center(child: Text("Report Post", style: TextStyle(color: Colors.white))),
+                            )
                           ],
                         ),
-                        SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            // TODO: Report functionality
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: Center(
-                            child: Text("Report Post", style: TextStyle(color: Colors.white)),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               );
             });
