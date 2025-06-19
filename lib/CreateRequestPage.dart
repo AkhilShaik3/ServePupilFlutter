@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:servepupil/location_picker.dart';
 
 class CreateRequestPage extends StatefulWidget {
   @override
@@ -15,6 +16,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   String description = '';
   String requestType = 'Help';
   String place = '';
+  double latitude = 45.5019; // Montreal default
+  double longitude = -73.5674;
   File? _pickedImage;
   bool loading = false;
 
@@ -93,8 +96,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       "description": description,
       "requestType": requestType,
       "place": place,
-      "latitude": 0.0,
-      "longitude": 0.0,
+      "latitude": latitude,
+      "longitude": longitude,
       "timestamp": timestamp,
       "imageUrl": uploadedImageUrl,
       "requestId": requestId,
@@ -149,13 +152,17 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 validator: (val) => val == null || val.isEmpty ? 'Please enter a description' : null,
               ),
               SizedBox(height: 16),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Enter place',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (val) => place = val,
-                validator: (val) => val == null || val.isEmpty ? 'Please enter a place' : null,
+              LocationPicker(
+                onLocationSelected: (selectedPlace, lat, lng) {
+                  setState(() {
+                    place = selectedPlace;
+                    latitude = lat;
+                    longitude = lng;
+                  });
+                },
+                initialPlace: place.isNotEmpty ? place : 'Montreal, QC, Canada',
+                initialLat: latitude,
+                initialLng: longitude,
               ),
               SizedBox(height: 24),
               ElevatedButton(
