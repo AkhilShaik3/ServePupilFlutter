@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:servepupil/ReportedCommentsPage.dart';
+import 'package:servepupil/ReportedUsersPage.dart';
 import 'ReportedRequestsView.dart';
-// import 'ReportedUsersView.dart';
-// import 'ReportedCommentsView.dart';
 
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});
@@ -32,10 +31,10 @@ class ReportsPage extends StatelessWidget {
             }),
             const SizedBox(height: 20),
             _buildReportButton(context, "Reported Users", () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (_) => ReportedUsersView()),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ReportedUsersPage()),
+              );
             }),
             const SizedBox(height: 20),
             _buildReportButton(context, "Reported Comments", () {
