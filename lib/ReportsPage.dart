@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:servepupil/ReportedCommentsPage.dart';
 import 'ReportedRequestsView.dart';
 // import 'ReportedUsersView.dart';
 // import 'ReportedCommentsView.dart';
@@ -38,10 +39,10 @@ class ReportsPage extends StatelessWidget {
             }),
             const SizedBox(height: 20),
             _buildReportButton(context, "Reported Comments", () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (_) => ReportedCommentsView()),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ReportedCommentsPage()),
+              );
             }),
           ],
         ),
