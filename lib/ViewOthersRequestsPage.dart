@@ -162,12 +162,28 @@ class _ViewOthersRequestsPageState extends State<ViewOthersRequestsPage> {
                             ),
                             SizedBox(height: 16),
                             ElevatedButton(
-                              onPressed: () {},
+                              onPressed: () async {
+                                final reportRef = FirebaseDatabase.instance.ref('reported_content/requests/$reqId');
+                                final snapshot = await reportRef.get();
+
+                                if (snapshot.exists) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('This request has already been reported')),
+                                  );
+                                } else {
+                                  await reportRef.set(true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Request reported successfully')),
+                                  );
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 padding: EdgeInsets.symmetric(vertical: 12),
                               ),
-                              child: Center(child: Text("Report Post", style: TextStyle(color: Colors.white))),
+                              child: Center(
+                                child: Text("Report Post", style: TextStyle(color: Colors.white)),
+                              ),
                             )
                           ],
                         ),

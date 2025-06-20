@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:geolocator/geolocator.dart';
 
 class LocationPicker extends StatefulWidget {
   final Function(String place, double lat, double lng) onLocationSelected;
@@ -29,6 +30,7 @@ class _LocationPickerState extends State<LocationPicker> {
   double? _selectedLat;
   double? _selectedLng;
   String? _selectedPlace;
+  bool _loadingLocation = false;
 
   @override
   void initState() {
@@ -39,6 +41,55 @@ class _LocationPickerState extends State<LocationPicker> {
       _selectedLng = widget.initialLng;
       _selectedPlace = widget.initialPlace;
       _searchController.text = widget.initialPlace ?? '';
+    } else {
+      _fetchLiveLocation();
+      _searchController.text = '';
+      _selectedPlace = null;
+    }
+  }
+
+  Future<void> _fetchLiveLocation() async {
+    setState(() {
+      _loadingLocation = true;
+    });
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _loadingLocation = false;
+        });
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _loadingLocation = false;
+          });
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _loadingLocation = false;
+        });
+        return;
+      }
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      setState(() {
+        _mapCenter = LatLng(position.latitude, position.longitude);
+        _selectedLat = position.latitude;
+        _selectedLng = position.longitude;
+        _selectedPlace = null;
+        _searchController.text = '';
+        _loadingLocation = false;
+      });
+      widget.onLocationSelected('', position.latitude, position.longitude);
+    } catch (e) {
+      setState(() {
+        _loadingLocation = false;
+      });
     }
   }
 
@@ -83,6 +134,9 @@ class _LocationPickerState extends State<LocationPicker> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadingLocation) {
+      return Center(child: CircularProgressIndicator());
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,

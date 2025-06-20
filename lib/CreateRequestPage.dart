@@ -160,9 +160,9 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     longitude = lng;
                   });
                 },
-                initialPlace: place.isNotEmpty ? place : 'Montreal, QC, Canada',
-                initialLat: latitude,
-                initialLng: longitude,
+                initialPlace: place.isNotEmpty ? place : null,
+                initialLat: place.isNotEmpty ? latitude : null,
+                initialLng: place.isNotEmpty ? longitude : null,
               ),
               SizedBox(height: 24),
               ElevatedButton(
