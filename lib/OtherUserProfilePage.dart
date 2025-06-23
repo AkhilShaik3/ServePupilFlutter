@@ -18,6 +18,8 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
   int followersCount = 0;
   int followingCount = 0;
 
+  final dbRef = FirebaseDatabase.instance.ref();
+
   @override
   void initState() {
     super.initState();
@@ -25,7 +27,7 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
   }
 
   void fetchUserDetails() async {
-    final ref = FirebaseDatabase.instance.ref('users/${widget.uid}');
+    final ref = dbRef.child('users/${widget.uid}');
     final snapshot = await ref.get();
 
     if (snapshot.exists && snapshot.value is Map) {
@@ -36,9 +38,27 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
         phone = userData['phone'] ?? '';
         address = userData['address'] ?? '';
         imageUrl = userData['imageUrl'] ?? '';
-        followersCount = userData['followers'] is Map ? (userData['followers'] as Map).length : 0;
-        followingCount = userData['following'] is Map ? (userData['following'] as Map).length : 0;
+        followersCount =
+        userData['followers'] is Map ? (userData['followers'] as Map).length : 0;
+        followingCount =
+        userData['following'] is Map ? (userData['following'] as Map).length : 0;
       });
+    }
+  }
+
+  void reportUser() async {
+    final reportRef = dbRef.child('reported_content/users/${widget.uid}');
+    final snapshot = await reportRef.get();
+
+    if (snapshot.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("This user has already been reported")),
+      );
+    } else {
+      await reportRef.set(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("User reported successfully")),
+      );
     }
   }
 
@@ -73,7 +93,8 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
             SizedBox(height: 16),
 
             // Name, phone, address
-            Text(userName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(userName,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             SizedBox(height: 6),
             Text(phone, style: TextStyle(fontSize: 16)),
             SizedBox(height: 4),
@@ -87,13 +108,15 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
               children: [
                 Column(
                   children: [
-                    Text('$followersCount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('$followersCount',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('Followers'),
                   ],
                 ),
                 Column(
                   children: [
-                    Text('$followingCount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('$followingCount',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('Following'),
                   ],
                 ),
@@ -111,9 +134,7 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
 
             // Report button
             ElevatedButton(
-              onPressed: () {
-                // Report logic not implemented
-              },
+              onPressed: reportUser,
               child: Text("Report User"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
