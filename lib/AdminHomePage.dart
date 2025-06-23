@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:servepupil/AdminViewRequestsPage.dart';
 import 'package:servepupil/LoginPage.dart';
 import 'package:servepupil/ReportsPage.dart';
 import 'package:servepupil/UserListView.dart';
@@ -62,7 +63,10 @@ class AdminHomePage extends StatelessWidget {
                   }),
                   const SizedBox(height: 15),
                   _buildButton(context, 'View Requests', Colors.teal, () {
-
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => AdminViewRequestsPage()),
+                    );
                   }),
                   const SizedBox(height: 15),
                   _buildButton(context, 'Logout', Colors.red, () {
