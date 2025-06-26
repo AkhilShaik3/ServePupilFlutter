@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:servepupil/ForgotPassword.dart';
 import 'package:servepupil/SignUpPage.dart';
 import 'package:servepupil/UserHomePage.dart';
-import 'package:servepupil/AdminHomePage.dart'; // Create this if needed
+import 'package:servepupil/AdminHomePage.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -20,11 +21,30 @@ class LoginPage extends StatelessWidget {
 
       final user = credential.user;
       if (user != null) {
+        final uid = user.uid;
+
+        // Fetch isBlocked status from database
+        final snapshot = await FirebaseDatabase.instance.ref().child('users/$uid').get();
+
+        if (snapshot.exists) {
+          final data = snapshot.value as Map;
+          final isBlocked = data['isBlocked'] ?? false;
+
+          if (isBlocked == true) {
+            // Blocked user – deny login
+            await FirebaseAuth.instance.signOut();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("You are blocked by admin.")),
+            );
+            return;
+          }
+        }
+
+        // ✅ Login allowed (either not blocked or no data present)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Login Successful!")),
         );
 
-        // Redirect based on email
         if (user.email == 'admin@gmail.com') {
           Navigator.pushReplacement(
             context,

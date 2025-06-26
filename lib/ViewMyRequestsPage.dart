@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:servepupil/EditRequestPage.dart';
 import 'CommentsPage.dart';
 import 'ProfileViewPage.dart';
 
@@ -168,7 +170,23 @@ class _ViewMyRequestsPageState extends State<ViewMyRequestsPage> {
                         children: [
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditRequestPage(
+                                      requestId: requestId,
+                                      ownerUid: user!.uid,
+                                      initialDescription: description,
+                                      initialType: requestType,
+                                      initialPlace: place,
+                                      initialImageUrl: imageUrl,
+                                      initialLat: data['latitude'] ?? 45.5019,
+                                      initialLng: data['longitude'] ?? -73.5674,
+                                    ),
+                                  ),
+                                );
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 padding: EdgeInsets.symmetric(vertical: 12),
@@ -179,7 +197,46 @@ class _ViewMyRequestsPageState extends State<ViewMyRequestsPage> {
                           SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () {},
+                              onPressed: () async {
+                                final shouldDelete = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Confirm Deletion'),
+                                    content: Text('Are you sure you want to delete this request?'),
+                                    actions: [
+                                      TextButton(
+                                        child: Text('Cancel'),
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                      ),
+                                      TextButton(
+                                        child: Text('Delete'),
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (shouldDelete == true) {
+                                  // Delete image from storage
+                                  if (imageUrl.isNotEmpty) {
+                                    try {
+                                      final storageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+                                      await storageRef.delete();
+                                    } catch (e) {
+                                      print('Error deleting image: $e');
+                                    }
+                                  }
+
+                                  // Delete request from database
+                                  await FirebaseDatabase.instance
+                                      .ref('requests/${user!.uid}/$requestId')
+                                      .remove();
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Request deleted')),
+                                  );
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 padding: EdgeInsets.symmetric(vertical: 12),
