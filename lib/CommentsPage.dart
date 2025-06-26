@@ -17,15 +17,31 @@ class _CommentsPageState extends State<CommentsPage> {
   final dbRef = FirebaseDatabase.instance.ref();
   final currentUser = FirebaseAuth.instance.currentUser;
 
-  Map<String, String> userNameCache = {}; // cache usernames
+  Map<String, String> userNameCache = {};
+  String? currentUserEmail;
+  bool isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    getCurrentUserInfo();
+  }
+
+  Future<void> getCurrentUserInfo() async {
+    final uid = currentUser?.uid;
+    if (uid != null) {
+      final snapshot = await dbRef.child('users/$uid/email').get();
+      currentUserEmail = snapshot.value?.toString() ?? '';
+      isAdmin = currentUserEmail == 'admin@gmail.com'; // adjust your admin email
+      setState(() {});
+    }
+  }
 
   Future<String> getUserName(String uid) async {
-    if (userNameCache.containsKey(uid)) {
-      return userNameCache[uid]!;
-    }
+    if (userNameCache.containsKey(uid)) return userNameCache[uid]!;
 
-    final snapshot = await dbRef.child('users').child(uid).child('name').once();
-    final name = snapshot.snapshot.value?.toString() ?? "Unknown";
+    final snapshot = await dbRef.child('users/$uid/name').get();
+    final name = snapshot.value?.toString() ?? "Unknown";
     userNameCache[uid] = name;
     return name;
   }
@@ -50,6 +66,32 @@ class _CommentsPageState extends State<CommentsPage> {
     commentController.clear();
   }
 
+  void deleteComment(String commentId) async {
+    await dbRef
+        .child('requests/${widget.requestOwnerUid}/${widget.requestId}/comments/$commentId')
+        .remove();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Comment deleted')),
+    );
+  }
+
+  void reportComment(String commentId) async {
+    final ref = dbRef.child('reported_content/comments/$commentId');
+    final snapshot = await ref.get();
+
+    if (snapshot.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('This comment has already been reported')),
+      );
+    } else {
+      await ref.set(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Comment reported successfully')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final commentsRef = dbRef
@@ -70,13 +112,16 @@ class _CommentsPageState extends State<CommentsPage> {
                   return Center(child: Text("No comments yet"));
                 }
 
-                final commentsMap = Map<String, dynamic>.from(snapshot.data!.snapshot.value as Map);
+                final commentsMap =
+                Map<String, dynamic>.from(snapshot.data!.snapshot.value as Map);
                 final entries = commentsMap.entries.toList()
-                  ..sort((a, b) => (b.value['timestamp'] ?? 0).compareTo(a.value['timestamp'] ?? 0));
+                  ..sort((a, b) =>
+                      (b.value['timestamp'] ?? 0).compareTo(a.value['timestamp'] ?? 0));
 
                 return ListView.builder(
                   itemCount: entries.length,
                   itemBuilder: (context, index) {
+                    final commentId = entries[index].key;
                     final commentData = Map<String, dynamic>.from(entries[index].value);
                     final uid = commentData['uid'] ?? '';
                     final text = commentData['text'] ?? '';
@@ -86,15 +131,47 @@ class _CommentsPageState extends State<CommentsPage> {
                       future: getUserName(uid),
                       builder: (context, snapshot) {
                         final name = snapshot.data ?? "Loading...";
-                        return ListTile(
-                          title: Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(text),
-                          trailing: Text(
-                            DateTime.fromMillisecondsSinceEpoch(timestamp)
-                                .toLocal()
-                                .toString()
-                                .split('.')[0],
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                        final isMyComment = uid == currentUser?.uid;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
+                              SizedBox(height: 4),
+                              Text(text),
+                              SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    DateTime.fromMillisecondsSinceEpoch(timestamp)
+                                        .toLocal()
+                                        .toString()
+                                        .split('.')[0],
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                  if (!isMyComment)
+                                    TextButton(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                        padding: EdgeInsets.zero,
+                                        minimumSize: Size(0, 30),
+                                      ),
+                                      child: Text(isAdmin ? "Delete" : "Report"),
+                                      onPressed: () {
+                                        if (isAdmin) {
+                                          deleteComment(commentId);
+                                        } else {
+                                          reportComment(commentId);
+                                        }
+                                      },
+                                    ),
+                                ],
+                              ),
+                              Divider(height: 16),
+                            ],
                           ),
                         );
                       },
