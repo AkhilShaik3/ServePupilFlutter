@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:servepupil/EditProfilePage.dart';
 import '../user_profile.dart';
 import 'ChangePasswordPage.dart';
+import 'FollowersFollowingListPage.dart'; // <-- import this page
 
 class ProfileViewPage extends StatelessWidget {
   const ProfileViewPage({super.key});
@@ -71,18 +72,46 @@ class ProfileViewPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Column(
-                      children: [
-                        Text("$followersCount", style: const TextStyle(fontSize: 16)),
-                        const Text("Followers"),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowersFollowingListPage(
+                              uid: uid!,
+                              title: 'Followers',
+                              listType: 'followers',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text("$followersCount", style: const TextStyle(fontSize: 16)),
+                          const Text("Followers"),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 40),
-                    Column(
-                      children: [
-                        Text("$followingCount", style: const TextStyle(fontSize: 16)),
-                        const Text("Following"),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowersFollowingListPage(
+                              uid: uid!,
+                              title: 'Following',
+                              listType: 'following',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text("$followingCount", style: const TextStyle(fontSize: 16)),
+                          const Text("Following"),
+                        ],
+                      ),
                     ),
                   ],
                 ),

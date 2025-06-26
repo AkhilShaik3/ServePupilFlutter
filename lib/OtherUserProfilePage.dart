@@ -27,10 +27,10 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
   void initState() {
     super.initState();
     fetchUserDetails();
-    checkIfFollowing();
+    listenToFollowingStatus();
   }
 
-  void fetchUserDetails() async {
+  void fetchUserDetails() {
     final ref = dbRef.child('users/${widget.uid}');
     ref.onValue.listen((event) {
       final data = event.snapshot.value;
@@ -41,23 +41,20 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
           phone = userData['phone'] ?? '';
           address = userData['address'] ?? '';
           imageUrl = userData['imageUrl'] ?? '';
-          followersCount =
-          userData['followers'] is Map ? (userData['followers'] as Map).length : 0;
-          followingCount =
-          userData['following'] is Map ? (userData['following'] as Map).length : 0;
+          followersCount = userData['followers'] is Map ? (userData['followers'] as Map).length : 0;
+          followingCount = userData['following'] is Map ? (userData['following'] as Map).length : 0;
         });
       }
     });
   }
 
-  void checkIfFollowing() async {
+  void listenToFollowingStatus() {
     final followingRef = dbRef.child('users/${user!.uid}/following/${widget.uid}');
-    final snapshot = await followingRef.get();
-    if (snapshot.exists) {
+    followingRef.onValue.listen((event) {
       setState(() {
-        isFollowing = true;
+        isFollowing = event.snapshot.exists;
       });
-    }
+    });
   }
 
   void toggleFollow() async {
@@ -74,10 +71,6 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
       await myFollowingRef.set(true);
       await otherFollowersRef.set(true);
     }
-
-    setState(() {
-      isFollowing = !isFollowing;
-    });
   }
 
   void reportUser() async {
