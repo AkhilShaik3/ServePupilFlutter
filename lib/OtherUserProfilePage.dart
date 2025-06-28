@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class OtherUserProfilePage extends StatefulWidget {
@@ -11,38 +12,64 @@ class OtherUserProfilePage extends StatefulWidget {
 }
 
 class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
+  final user = FirebaseAuth.instance.currentUser;
+  final dbRef = FirebaseDatabase.instance.ref();
+
   String userName = "";
   String phone = "";
   String address = "";
   String imageUrl = "";
   int followersCount = 0;
   int followingCount = 0;
-
-  final dbRef = FirebaseDatabase.instance.ref();
+  bool isFollowing = false;
 
   @override
   void initState() {
     super.initState();
     fetchUserDetails();
+    listenToFollowingStatus();
   }
 
-  void fetchUserDetails() async {
+  void fetchUserDetails() {
     final ref = dbRef.child('users/${widget.uid}');
-    final snapshot = await ref.get();
+    ref.onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data != null && data is Map) {
+        final userData = Map<String, dynamic>.from(data);
+        setState(() {
+          userName = userData['name'] ?? '';
+          phone = userData['phone'] ?? '';
+          address = userData['address'] ?? '';
+          imageUrl = userData['imageUrl'] ?? '';
+          followersCount = userData['followers'] is Map ? (userData['followers'] as Map).length : 0;
+          followingCount = userData['following'] is Map ? (userData['following'] as Map).length : 0;
+        });
+      }
+    });
+  }
 
-    if (snapshot.exists && snapshot.value is Map) {
-      final userData = Map<String, dynamic>.from(snapshot.value as Map);
-
+  void listenToFollowingStatus() {
+    final followingRef = dbRef.child('users/${user!.uid}/following/${widget.uid}');
+    followingRef.onValue.listen((event) {
       setState(() {
-        userName = userData['name'] ?? '';
-        phone = userData['phone'] ?? '';
-        address = userData['address'] ?? '';
-        imageUrl = userData['imageUrl'] ?? '';
-        followersCount =
-        userData['followers'] is Map ? (userData['followers'] as Map).length : 0;
-        followingCount =
-        userData['following'] is Map ? (userData['following'] as Map).length : 0;
+        isFollowing = event.snapshot.exists;
       });
+    });
+  }
+
+  void toggleFollow() async {
+    final myUid = user!.uid;
+    final otherUid = widget.uid;
+
+    final myFollowingRef = dbRef.child('users/$myUid/following/$otherUid');
+    final otherFollowersRef = dbRef.child('users/$otherUid/followers/$myUid');
+
+    if (isFollowing) {
+      await myFollowingRef.remove();
+      await otherFollowersRef.remove();
+    } else {
+      await myFollowingRef.set(true);
+      await otherFollowersRef.set(true);
     }
   }
 
@@ -93,8 +120,7 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
             SizedBox(height: 16),
 
             // Name, phone, address
-            Text(userName,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(userName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             SizedBox(height: 6),
             Text(phone, style: TextStyle(fontSize: 16)),
             SizedBox(height: 4),
@@ -108,23 +134,19 @@ class _OtherUserProfilePageState extends State<OtherUserProfilePage> {
               children: [
                 Column(
                   children: [
-                    Text('$followersCount',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('$followersCount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('Followers'),
                   ],
                 ),
                 Column(
                   children: [
-                    Text('$followingCount',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('$followingCount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('Following'),
                   ],
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    // Follow logic not implemented
-                  },
-                  child: Text("Follow"),
+                  onPressed: toggleFollow,
+                  child: Text(isFollowing ? "Unfollow" : "Follow"),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
                 )
               ],

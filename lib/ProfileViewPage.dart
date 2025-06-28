@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:servepupil/EditProfilePage.dart';
 import '../user_profile.dart';
 import 'ChangePasswordPage.dart';
+import 'FollowersFollowingListPage.dart'; // <-- import this page
 
 class ProfileViewPage extends StatelessWidget {
   const ProfileViewPage({super.key});
@@ -13,18 +14,28 @@ class ProfileViewPage extends StatelessWidget {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final userRef = FirebaseDatabase.instance.ref().child('users/$uid');
 
-    return FutureBuilder(
+    return FutureBuilder<DataSnapshot>(
       future: userRef.get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data?.value == null) {
-          return const Scaffold(
-            body: Center(child: Text("Profile not found")),
-          );
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        final userProfile = UserProfile.fromJson(
-          Map<String, dynamic>.from(snapshot.data!.value as Map),
-        );
+        if (!snapshot.hasData || snapshot.data?.value == null) {
+          return const Scaffold(body: Center(child: Text("Profile not found")));
+        }
+
+        final rawData = Map<String, dynamic>.from(snapshot.data!.value as Map);
+
+        final userProfile = UserProfile.fromJson(rawData);
+
+        final followers = rawData['followers'];
+        final following = rawData['following'];
+
+        final int followersCount =
+        followers is Map ? followers.length : (followers is int ? followers : 0);
+        final int followingCount =
+        following is Map ? following.length : (following is int ? following : 0);
 
         return Scaffold(
           appBar: AppBar(title: const Text("Profile")),
@@ -32,7 +43,6 @@ class ProfileViewPage extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // 🖼 Rectangular full-width profile image
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: userProfile.imageUrl.isNotEmpty
@@ -49,7 +59,6 @@ class ProfileViewPage extends StatelessWidget {
                     child: const Icon(Icons.person, size: 80, color: Colors.grey),
                   ),
                 ),
-
                 const SizedBox(height: 20),
                 Text(
                   userProfile.name,
@@ -60,29 +69,53 @@ class ProfileViewPage extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(userProfile.bio),
                 const SizedBox(height: 20),
-
-                // Followers & Following
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Column(
-                      children: [
-                        Text("${userProfile.followers}", style: const TextStyle(fontSize: 16)),
-                        const Text("Followers"),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowersFollowingListPage(
+                              uid: uid!,
+                              title: 'Followers',
+                              listType: 'followers',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text("$followersCount", style: const TextStyle(fontSize: 16)),
+                          const Text("Followers"),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 40),
-                    Column(
-                      children: [
-                        Text("${userProfile.following}", style: const TextStyle(fontSize: 16)),
-                        const Text("Following"),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowersFollowingListPage(
+                              uid: uid!,
+                              title: 'Following',
+                              listType: 'following',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text("$followingCount", style: const TextStyle(fontSize: 16)),
+                          const Text("Following"),
+                        ],
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Edit Profile Button
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -93,8 +126,6 @@ class ProfileViewPage extends StatelessWidget {
                   child: const Text("Edit Profile"),
                 ),
                 const SizedBox(height: 10),
-
-                // Change Password
                 TextButton(
                   onPressed: () {
                     Navigator.push(

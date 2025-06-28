@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:servepupil/CreateRequestPage.dart';
 import 'package:servepupil/LoginPage.dart';
+import 'package:servepupil/PersonalFeedPage.dart';
 import 'package:servepupil/ViewMyRequestsPage.dart';
 import 'package:servepupil/ViewOthersRequestsPage.dart';
 import 'package:servepupil/profile_router.dart';
@@ -75,6 +76,13 @@ class UserHomePage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => ViewMyRequestsPage()),
+                    );
+                  }),
+                  const SizedBox(height: 15),
+                  _buildButton(context, 'Personal Feed', Colors.teal, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => PersonalFeedPage()),
                     );
                   }),
                   const SizedBox(height: 15),
