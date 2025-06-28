@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:servepupil/EditRequestPage.dart';
+import 'CommentsPage.dart';
+import 'ProfileViewPage.dart';
 
 class ViewMyRequestsPage extends StatefulWidget {
   @override
@@ -8,22 +12,30 @@ class ViewMyRequestsPage extends StatefulWidget {
 }
 
 class _ViewMyRequestsPageState extends State<ViewMyRequestsPage> {
-  final dbRef = FirebaseDatabase.instance.ref();
   final user = FirebaseAuth.instance.currentUser;
+  String userName = "Me";
+
+  @override
+  void initState() {
+    super.initState();
+    fetchMyUsername();
+  }
+
+  void fetchMyUsername() async {
+    final snapshot = await FirebaseDatabase.instance.ref('users/${user!.uid}/name').get();
+    if (snapshot.exists) {
+      setState(() {
+        userName = snapshot.value.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (user == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text('My Requests')),
-        body: Center(child: Text('You are not logged in')),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(title: Text('My Requests')),
       body: StreamBuilder(
-        stream: dbRef.child('requests').child(user!.uid).onValue,
+        stream: FirebaseDatabase.instance.ref('requests/${user!.uid}').onValue,
         builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
           if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
             return Center(child: Text('No requests found'));
@@ -32,66 +44,211 @@ class _ViewMyRequestsPageState extends State<ViewMyRequestsPage> {
           final requestsMap = Map<String, dynamic>.from(snapshot.data!.snapshot.value as Map);
           final requestsList = requestsMap.entries.toList();
 
-          return ListView.separated(
-            padding: EdgeInsets.all(16),
+          return ListView.builder(
             itemCount: requestsList.length,
-            separatorBuilder: (context, index) => Divider(),
             itemBuilder: (context, index) {
-              final key = requestsList[index].key;
               final data = Map<String, dynamic>.from(requestsList[index].value);
-
+              final requestId = requestsList[index].key;
+              final imageUrl = data['imageUrl'] ?? '';
               final description = data['description'] ?? '';
               final requestType = data['requestType'] ?? '';
               final place = data['place'] ?? '';
-              final imageUrl = data['imageUrl'] ?? '';
+              final likes = Map<String, dynamic>.from(data['likedBy'] ?? {});
+              final comments = Map<String, dynamic>.from(data['comments'] ?? {});
+              final commentCount = comments.length;
+              final likesCount = likes.length;
+              final isLikedByMe = likes.containsKey(user!.uid);
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[300],
-                        child: imageUrl.isNotEmpty
-                            ? Image.network(imageUrl, fit: BoxFit.cover)
-                            : Icon(Icons.image, size: 40, color: Colors.grey[700]),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: imageUrl.isNotEmpty
+                                ? Image.network(imageUrl, width: 80, height: 80, fit: BoxFit.cover)
+                                : Container(
+                              width: 80,
+                              height: 80,
+                              color: Colors.grey[300],
+                              child: Icon(Icons.image, size: 40, color: Colors.grey),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+
+                          // Texts
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(description, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text(requestType, style: TextStyle(fontSize: 14)),
+                                Text(place, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                              ],
+                            ),
+                          ),
+
+                          // Likes & Comments
+                          Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  final ref = FirebaseDatabase.instance
+                                      .ref('requests/${user!.uid}/$requestId/likedBy/${user!.uid}');
+                                  if (isLikedByMe) {
+                                    ref.remove();
+                                  } else {
+                                    ref.set(true);
+                                  }
+                                },
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                                      color: isLikedByMe ? Colors.red : Colors.grey,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text('$likesCount'),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CommentsPage(
+                                        requestOwnerUid: user!.uid,
+                                        requestId: requestId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.chat_bubble_outline, size: 20),
+                                    SizedBox(width: 4),
+                                    Text('$commentCount'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(description, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                            Text(requestType.toLowerCase()),
-                            Text(place),
-                          ],
+
+                      SizedBox(height: 10),
+
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ProfileViewPage()),
+                          );
+                        },
+                        child: Center(
+                          child: Text(
+                            userName,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
                         ),
-                      )
+                      ),
+
+                      SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditRequestPage(
+                                      requestId: requestId,
+                                      ownerUid: user!.uid,
+                                      initialDescription: description,
+                                      initialType: requestType,
+                                      initialPlace: place,
+                                      initialImageUrl: imageUrl,
+                                      initialLat: data['latitude'] ?? 45.5019,
+                                      initialLng: data['longitude'] ?? -73.5674,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: Text("Edit", style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final shouldDelete = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Confirm Deletion'),
+                                    content: Text('Are you sure you want to delete this request?'),
+                                    actions: [
+                                      TextButton(
+                                        child: Text('Cancel'),
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                      ),
+                                      TextButton(
+                                        child: Text('Delete'),
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (shouldDelete == true) {
+                                  // Delete image from storage
+                                  if (imageUrl.isNotEmpty) {
+                                    try {
+                                      final storageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+                                      await storageRef.delete();
+                                    } catch (e) {
+                                      print('Error deleting image: $e');
+                                    }
+                                  }
+
+                                  // Delete request from database
+                                  await FirebaseDatabase.instance
+                                      .ref('requests/${user!.uid}/$requestId')
+                                      .remove();
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Request deleted')),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: Text("Delete", style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          // Edit functionality (not implemented)
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                        child: Text('Edit'),
-                      ),
-                      SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Delete functionality (not implemented)
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        child: Text('Delete'),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               );
             },
           );

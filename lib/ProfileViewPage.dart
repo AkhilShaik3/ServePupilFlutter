@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:servepupil/EditProfilePage.dart';
 import '../user_profile.dart';
 import 'ChangePasswordPage.dart';
+import 'FollowersFollowingListPage.dart'; // <-- import this page
 
 class ProfileViewPage extends StatelessWidget {
   const ProfileViewPage({super.key});
@@ -13,50 +14,104 @@ class ProfileViewPage extends StatelessWidget {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final userRef = FirebaseDatabase.instance.ref().child('users/$uid');
 
-    return FutureBuilder(
+    return FutureBuilder<DataSnapshot>(
       future: userRef.get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data?.value == null) {
-          return const Center(child: Text("Profile not found"));
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        final userProfile = UserProfile.fromJson(
-          Map<String, dynamic>.from(snapshot.data!.value as Map),
-        );
+        if (!snapshot.hasData || snapshot.data?.value == null) {
+          return const Scaffold(body: Center(child: Text("Profile not found")));
+        }
+
+        final rawData = Map<String, dynamic>.from(snapshot.data!.value as Map);
+
+        final userProfile = UserProfile.fromJson(rawData);
+
+        final followers = rawData['followers'];
+        final following = rawData['following'];
+
+        final int followersCount =
+        followers is Map ? followers.length : (followers is int ? followers : 0);
+        final int followingCount =
+        following is Map ? following.length : (following is int ? following : 0);
 
         return Scaffold(
           appBar: AppBar(title: const Text("Profile")),
-          body: Padding(
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(userProfile.imageUrl),
-                  radius: 50,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: userProfile.imageUrl.isNotEmpty
+                      ? Image.network(
+                    userProfile.imageUrl,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                      : Container(
+                    height: 200,
+                    width: double.infinity,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.person, size: 80, color: Colors.grey),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   userProfile.name,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                Text("Phone: ${userProfile.phone}"),
-                Text("Bio: ${userProfile.bio}"),
+                const SizedBox(height: 8),
+                Text(userProfile.phone),
+                const SizedBox(height: 4),
+                Text(userProfile.bio),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Column(
-                      children: [
-                        Text("${userProfile.followers}"),
-                        const Text("Followers"),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowersFollowingListPage(
+                              uid: uid!,
+                              title: 'Followers',
+                              listType: 'followers',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text("$followersCount", style: const TextStyle(fontSize: 16)),
+                          const Text("Followers"),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 40),
-                    Column(
-                      children: [
-                        Text("${userProfile.following}"),
-                        const Text("Following"),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowersFollowingListPage(
+                              uid: uid!,
+                              title: 'Following',
+                              listType: 'following',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text("$followingCount", style: const TextStyle(fontSize: 16)),
+                          const Text("Following"),
+                        ],
+                      ),
                     ),
                   ],
                 ),

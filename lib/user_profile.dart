@@ -20,16 +20,21 @@ class UserProfile {
     'bio': bio,
     'phone': phone,
     'imageUrl': imageUrl,
-    'followers': followers,
-    'following': following,
+    // Save followers and following as empty maps (or update logic as needed)
+    'followers': {},
+    'following': {},
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
-    name: json['name'],
-    bio: json['bio'],
-    phone: json['phone'],
-    imageUrl: json['imageUrl'],
-    followers: json['followers'],
-    following: json['following'],
+    name: json['name'] ?? '',
+    bio: json['bio'] ?? '',
+    phone: json['phone'] ?? '',
+    imageUrl: json['imageUrl'] ?? '',
+    followers: json['followers'] is Map
+        ? (json['followers'] as Map).length
+        : (json['followers'] ?? 0),
+    following: json['following'] is Map
+        ? (json['following'] as Map).length
+        : (json['following'] ?? 0),
   );
 }

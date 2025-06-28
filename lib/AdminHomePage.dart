@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:servepupil/AdminViewRequestsPage.dart';
+import 'package:servepupil/LoginPage.dart';
+import 'package:servepupil/ReportsPage.dart';
+import 'package:servepupil/UserListView.dart';
 
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({super.key});
@@ -44,25 +48,34 @@ class AdminHomePage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Column(
                 children: [
-                  _buildButton(context, 'Profile', Colors.teal, () {
-                    // Navigate to Profile Page
+                  _buildButton(context, 'View Users', Colors.teal, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => UserListPage()),
+                    );
                   }),
                   const SizedBox(height: 15),
-                  _buildButton(context, 'Create Request', Colors.teal, () {
-                    // Navigate to Create Request Page
+                  _buildButton(context, 'View Reports', Colors.teal, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ReportsPage()),
+                    );
                   }),
                   const SizedBox(height: 15),
-                  _buildButton(context, 'View Others Requests', Colors.teal, () {
-                    // Navigate to View Others' Requests Page
-                  }),
-                  const SizedBox(height: 15),
-                  _buildButton(context, 'View My Requests', Colors.teal, () {
-                    // Navigate to My Requests Page
+                  _buildButton(context, 'View Requests', Colors.teal, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => AdminViewRequestsPage()),
+                    );
                   }),
                   const SizedBox(height: 15),
                   _buildButton(context, 'Logout', Colors.red, () {
-                    // Handle logout logic
-                    Navigator.pop(context);
+                    // Navigate to login and clear all previous routes
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginPage()),
+                          (route) => false,
+                    );
                   }),
                 ],
               ),

@@ -1,12 +1,10 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-
-import 'package:servepupil/request_model.dart';
+import 'package:servepupil/location_picker.dart';
 
 class CreateRequestPage extends StatefulWidget {
   @override
@@ -15,22 +13,16 @@ class CreateRequestPage extends StatefulWidget {
 
 class _CreateRequestPageState extends State<CreateRequestPage> {
   final _formKey = GlobalKey<FormState>();
-
   String description = '';
-  String requestType = 'Help'; // fixed value
+  String requestType = 'Help';
   String place = '';
+  double latitude = 45.5019; // Montreal default
+  double longitude = -73.5674;
   File? _pickedImage;
-  String? imageUrl;
-
   bool loading = false;
 
   final dbRef = FirebaseDatabase.instance.ref();
   final ImagePicker _picker = ImagePicker();
-
-  Future<bool> checkUserExists(String uid) async {
-    final snapshot = await dbRef.child('users').child(uid).once();
-    return snapshot.snapshot.value != null;
-  }
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -45,17 +37,19 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
     try {
       final storageRef = FirebaseStorage.instance
           .ref()
-          .child('request_images')
-          .child(userId)
-          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+          .child('request_images/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      final uploadTask = await storageRef.putFile(imageFile);
-      final downloadUrl = await storageRef.getDownloadURL();
-      return downloadUrl;
+      await storageRef.putFile(imageFile);
+      return await storageRef.getDownloadURL();
     } catch (e) {
       print('Image upload error: $e');
       return null;
     }
+  }
+
+  Future<bool> _checkUserExists(String uid) async {
+    final snapshot = await dbRef.child('users').child(uid).once();
+    return snapshot.snapshot.exists;
   }
 
   Future<void> createRequest() async {
@@ -67,6 +61,15 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       return;
     }
 
+    // Check user profile existence in /users
+    final exists = await _checkUserExists(user.uid);
+    if (!exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please complete your profile before creating a request.')),
+      );
+      return;
+    }
+
     if (_pickedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please select an image')),
@@ -74,54 +77,39 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       return;
     }
 
-    setState(() {
-      loading = true;
-    });
+    setState(() => loading = true);
 
-    bool exists = await checkUserExists(user.uid);
-    if (!exists) {
-      setState(() {
-        loading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User record not found')),
-      );
-      return;
-    }
-
-    // Upload image & get URL
     final uploadedImageUrl = await _uploadImage(_pickedImage!, user.uid);
     if (uploadedImageUrl == null) {
-      setState(() {
-        loading = false;
-      });
+      setState(() => loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to upload image')),
       );
       return;
     }
 
+    final requestRef = dbRef.child('requests').child(user.uid).push();
+    final requestId = requestRef.key!;
     final timestamp = DateTime.now().millisecondsSinceEpoch.toDouble();
 
-    final newRequest = RequestModel(
-      id: '',
-      description: description,
-      requestType: requestType,
-      place: place,
-      latitude: 0.0,
-      longitude: 0.0,
-      timestamp: timestamp,
-      imageUrl: uploadedImageUrl,
-    );
+    final requestData = {
+      "description": description,
+      "requestType": requestType,
+      "place": place,
+      "latitude": latitude,
+      "longitude": longitude,
+      "timestamp": timestamp,
+      "imageUrl": uploadedImageUrl,
+      "requestId": requestId,
+      "ownerUid": user.uid,
+      "likes": 0,
+      "likedBy": {},
+      "comments": {}
+    };
 
-    DatabaseReference newRequestRef = dbRef.child('requests').child(user.uid).push();
+    await requestRef.set(requestData);
 
-    await newRequestRef.set(newRequest.toMap());
-
-    setState(() {
-      loading = false;
-    });
-
+    setState(() => loading = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Request created successfully')),
     );
@@ -149,14 +137,11 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   height: 150,
                   color: Colors.grey[300],
                   child: _pickedImage == null
-                      ? Center(
-                    child: Icon(Icons.image, size: 50, color: Colors.grey[700]),
-                  )
+                      ? Center(child: Icon(Icons.image, size: 50, color: Colors.grey[700]))
                       : Image.file(_pickedImage!, fit: BoxFit.cover),
                 ),
               ),
               SizedBox(height: 16),
-
               TextFormField(
                 decoration: InputDecoration(
                   labelText: 'Enter description',
@@ -164,22 +149,22 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
                 maxLines: 3,
                 onChanged: (val) => description = val,
-                validator: (val) =>
-                val == null || val.isEmpty ? 'Please enter a description' : null,
+                validator: (val) => val == null || val.isEmpty ? 'Please enter a description' : null,
               ),
               SizedBox(height: 16),
-
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Enter place',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (val) => place = val,
-                validator: (val) =>
-                val == null || val.isEmpty ? 'Please enter a place' : null,
+              LocationPicker(
+                onLocationSelected: (selectedPlace, lat, lng) {
+                  setState(() {
+                    place = selectedPlace;
+                    latitude = lat;
+                    longitude = lng;
+                  });
+                },
+                initialPlace: place.isNotEmpty ? place : null,
+                initialLat: place.isNotEmpty ? latitude : null,
+                initialLng: place.isNotEmpty ? longitude : null,
               ),
               SizedBox(height: 24),
-
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
