@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class FollowersFollowingListPage extends StatefulWidget {
@@ -20,6 +21,7 @@ class FollowersFollowingListPage extends StatefulWidget {
 class _FollowersFollowingListPageState extends State<FollowersFollowingListPage> {
   final dbRef = FirebaseDatabase.instance.ref();
   List<Map<String, String>> usersList = [];
+  final currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
@@ -62,6 +64,20 @@ class _FollowersFollowingListPageState extends State<FollowersFollowingListPage>
     });
   }
 
+  Future<void> _unfollowUser(String otherUid) async {
+    final myUid = currentUser!.uid;
+
+    final myFollowingRef = dbRef.child('users/$myUid/following/$otherUid');
+    final theirFollowersRef = dbRef.child('users/$otherUid/followers/$myUid');
+
+    await myFollowingRef.remove();
+    await theirFollowersRef.remove();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Unfollowed successfully")),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,6 +95,8 @@ class _FollowersFollowingListPageState extends State<FollowersFollowingListPage>
         itemCount: usersList.length,
         itemBuilder: (context, index) {
           final user = usersList[index];
+          final otherUid = user['uid']!;
+
           return ListTile(
             leading: CircleAvatar(
               backgroundImage: user['imageUrl']!.isNotEmpty
@@ -86,6 +104,12 @@ class _FollowersFollowingListPageState extends State<FollowersFollowingListPage>
                   : const AssetImage('assets/images/default_user.png') as ImageProvider,
             ),
             title: Text(user['name']!),
+            trailing: widget.listType == "following" && widget.uid == currentUser?.uid
+                ? TextButton(
+              onPressed: () => _unfollowUser(otherUid),
+              child: const Text("Unfollow", style: TextStyle(color: Colors.red)),
+            )
+                : null,
           );
         },
       ),
